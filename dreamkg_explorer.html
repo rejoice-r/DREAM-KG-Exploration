@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DREAM-KG Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg2: #111827;
+    --bg3: #1a2235;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --border: rgba(255,255,255,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* Header */
+  header {
+    padding: 48px 0 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .badge {
+    display: inline-block;
+    background: rgba(0,212,255,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.3);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(24px, 4vw, 40px);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    color: var(--text2);
+    font-size: 16px;
+    font-weight: 300;
+    max-width: 600px;
+    line-height: 1.6;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 32px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-label { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* Main layout */
+  .main { display: grid; grid-template-columns: 280px 1fr; gap: 24px; padding: 32px 0; }
+
+  @media (max-width: 768px) { .main { grid-template-columns: 1fr; } }
+
+  /* Sidebar */
+  .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  .filter-btn {
+    width: 100%;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.15s;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .filter-btn:last-child { border-bottom: none; }
+  .filter-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+  .filter-btn.active { background: rgba(0,212,255,0.08); color: var(--accent); }
+
+  .filter-btn .count {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    background: rgba(255,255,255,0.08);
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+
+  .filter-btn.active .count { background: rgba(0,212,255,0.2); color: var(--accent); }
+
+  /* Content area */
+  .content { display: flex; flex-direction: column; gap: 16px; }
+
+  /* Search */
+  .search-bar {
+    position: relative;
+  }
+
+  .search-bar input {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px 12px 44px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-bar input:focus { border-color: rgba(0,212,255,0.4); }
+  .search-bar input::placeholder { color: var(--text2); }
+
+  .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text2);
+    font-size: 16px;
+  }
+
+  /* Use case cards */
+  .use-case-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .use-case-card:hover { border-color: rgba(0,212,255,0.3); background: var(--bg3); transform: translateY(-1px); }
+  .use-case-card.impossible { border-color: rgba(239,68,68,0.2); }
+  .use-case-card.impossible:hover { border-color: rgba(239,68,68,0.4); }
+
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+
+  .card-question {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.4;
+    flex: 1;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .status-pill.possible { background: rgba(16,185,129,0.12); color: var(--success); border: 1px solid rgba(16,185,129,0.25); }
+  .status-pill.impossible { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+  .status-pill.partial { background: rgba(245,158,11,0.1); color: var(--warning); border: 1px solid rgba(245,158,11,0.2); }
+
+  .card-desc { font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 14px; }
+
+  .card-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .tag {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.05);
+    color: var(--text2);
+    border: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Expanded card */
+  .card-expanded { display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
+  .card-expanded.open { display: block; }
+
+  .sparql-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #94a3b8;
+    overflow-x: auto;
+    margin-bottom: 12px;
+  }
+
+  .sparql-block .kw { color: #c084fc; }
+  .sparql-block .prefix { color: #60a5fa; }
+  .sparql-block .var { color: #34d399; }
+  .sparql-block .str { color: #fbbf24; }
+
+  .run-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    background: rgba(0,212,255,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+
+  .run-btn:hover { background: rgba(0,212,255,0.2); }
+
+  .gap-note {
+    background: rgba(239,68,68,0.06);
+    border: 1px solid rgba(239,68,68,0.15);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #fca5a5;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+
+  .gap-note strong { color: var(--danger); }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 60px 20px; color: var(--text2); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+  /* Predicate section */
+  .predicate-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .pred-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  .pred-chip.has-data { color: var(--success); border-color: rgba(16,185,129,0.2); }
+  .pred-chip.no-data { color: var(--danger); border-color: rgba(239,68,68,0.2); }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="badge">PROTO-OKN · DREAM-KG · EXPLORER v1.0</div>
+    <h1>DREAM-KG<br><span>Use Case Explorer</span></h1>
+    <p class="subtitle">Explore what questions you can ask the DREAM Knowledge Graph — and discover where the data gaps are.</p>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat"><span class="stat-num">662</span><span class="stat-label">Services</span></div>
+    <div class="stat"><span class="stat-num">55</span><span class="stat-label">Predicates</span></div>
+    <div class="stat"><span class="stat-num">3,762</span><span class="stat-label">Reviews</span></div>
+    <div class="stat"><span class="stat-num" id="possible-count" style="color:var(--success)">—</span><span class="stat-label">Possible Queries</span></div>
+    <div class="stat"><span class="stat-num" id="impossible-count" style="color:var(--danger)">—</span><span class="stat-label">Impossible Queries</span></div>
+  </div>
+
+  <div class="main">
+    <aside class="sidebar">
+      <div class="panel">
+        <div class="panel-header"><span class="dot"></span> Filter by Status</div>
+        <button class="filter-btn active" onclick="filterCards('all', this)">All Use Cases <span class="count" id="count-all">—</span></button>
+        <button class="filter-btn" onclick="filterCards('possible', this)">✓ Possible <span class="count" id="count-possible">—</span></button>
+        <button class="filter-btn" onclick="filterCards('partial', this)">~ Partial <span class="count" id="count-partial">—</span></button>
+        <button class="filter-btn" onclick="filterCards('impossible', this)">✗ Not Possible <span class="count" id="count-impossible">—</span></button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><span class="dot"></span> Filter by Topic</div>
+        <button class="filter-btn active-topic" onclick="filterTopic('all', this)" data-topic="all">All Topics <span class="count">18</span></button>
+        <button class="filter-btn" onclick="filterTopic('location', this)" data-topic="location">📍 Location <span class="count">4</span></button>
+        <button class="filter-btn" onclick="filterTopic('hours', this)" data-topic="hours">🕐 Hours <span class="count">3</span></button>
+        <button class="filter-btn" onclick="filterTopic('language', this)" data-topic="language">🗣 Language <span class="count">3</span></button>
+        <button class="filter-btn" onclick="filterTopic('contact', this)" data-topic="contact">📞 Contact <span class="count">2</span></button>
+        <button class="filter-btn" onclick="filterTopic('population', this)" data-topic="population">👥 Population <span class="count">3</span></button>
+        <button class="filter-btn" onclick="filterTopic('reviews', this)" data-topic="reviews">⭐ Reviews <span class="count">3</span></button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><span class="dot"></span> Legend</div>
+        <div style="padding:12px 16px; display:flex; flex-direction:column; gap:10px;">
+          <div class="legend-item"><span class="status-pill possible">✓ POSSIBLE</span> Query works, data exists</div>
+          <div class="legend-item"><span class="status-pill partial">~ PARTIAL</span> Works but incomplete data</div>
+          <div class="legend-item"><span class="status-pill impossible">✗ MISSING</span> Query returns 0 results</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="content">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search" placeholder="Search use cases..." oninput="searchCards()">
+      </div>
+
+      <div id="cards-container"></div>
+      <div class="empty" id="empty-state" style="display:none">
+        <div class="empty-icon">🔭</div>
+        <div>No use cases match your search.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const FRINK_BASE = "https://frink.apps.renci.org/?sources=%5B%22dreamkg%22%5D&query=";
+
+function encodeQuery(q) {
+  return FRINK_BASE + encodeURIComponent(q.trim());
+}
+
+const useCases = [
+  {
+    id: 1,
+    question: "Which services are open on weekends?",
+    status: "possible",
+    topic: "hours",
+    desc: "Find all services available on Saturdays or Sundays. Returns 88 results — the first query we ran together.",
+    predicates: ["hoursAvailable", "dayOfWeek", "name"],
+    query: `PREFIX dreamkg: <http://www.semanticweb.org/dreamkg/ijcai/>
+PREFIX sdo: <http://schema.org/>
+SELECT DISTINCT ?service ?name {
+  ?service sdo:hoursAvailable ?hours .
+  ?hours sdo:dayOfWeek ?dow .
+  ?service sdo:name ?name .
+  FILTER(?dow IN ("Saturday","Sunday"))
+}`,
+    gap: null
+  },
+  {
+    id: 2,
+    question: "What are the opening and closing hours of each service?",
+    status: "possible",
+    topic: "hours",
+    desc: "Get the full schedule for every service — what time they open and close each day.",
+    predicates: ["hoursAvailable", "dayOfWeek", "opens", "closes", "name"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT ?name ?day ?opens ?closes {
+  ?service sdo:name ?name ;
+           sdo:hoursAvailable ?hours .
+  ?hours sdo:dayOfWeek ?day ;
+         sdo:opens ?opens ;
+         sdo:closes ?closes .
+}
+ORDER BY ?name ?day`,
+    gap: null
+  },
+  {
+    id: 3,
+    question: "Which services have no hours listed at all?",
+    status: "possible",
+    topic: "hours",
+    desc: "Find services where no opening hours have been recorded — 53 services are missing this data.",
+    predicates: ["hoursAvailable", "name"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT ?service ?name {
+  ?service a sdo:Service ;
+           sdo:name ?name .
+  FILTER NOT EXISTS { ?service sdo:hoursAvailable ?hours }
+}`,
+    gap: null
+  },
+  {
+    id: 4,
+    question: "What services are located in Philadelphia?",
+    status: "impossible",
+    topic: "location",
+    desc: "Try to filter services by city name. Returns zero results — city (addressLocality) is not stored in the KG.",
+    predicates: ["address", "addressLocality"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT DISTINCT ?service ?name {
+  ?service sdo:name ?name ;
+           sdo:address ?addr .
+  ?addr sdo:addressLocality ?city .
+  FILTER(?city = "Philadelphia")
+}`,
+    gap: "❌ addressLocality (city name) is completely missing from all 662 services. This query will always return 0 results. Proposed fix: use the geocoding script to reverse geocode all lat/lon coordinates and add city data."
+  },
+  {
+    id: 5,
+    question: "What is the zip code of each service?",
+    status: "impossible",
+    topic: "location",
+    desc: "Retrieve postal codes for services. The postalCode predicate exists in the schema but has no values stored.",
+    predicates: ["address", "postalCode"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT ?name ?postcode {
+  ?service sdo:name ?name ;
+           sdo:address ?addr .
+  ?addr sdo:postalCode ?postcode .
+}`,
+    gap: "❌ postalCode exists as a predicate but no values are stored. The field is empty across all services. Proposed fix: add postal codes using the geocoding enrichment dataset."
+  },
+  {
+    id: 6,
+    question: "Where are services located on a map? (coordinates)",
+    status: "possible",
+    topic: "location",
+    desc: "Get GPS coordinates for all services. Latitude and longitude are well populated across the dataset.",
+    predicates: ["latitude", "longitude", "name"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT ?name ?lat ?lon {
+  ?service sdo:name ?name ;
+           sdo:latitude ?lat ;
+           sdo:longitude ?lon .
+}`,
+    gap: null
+  },
+  {
+    id: 7,
+    question: "Which services are within walking distance of a location?",
+    status: "impossible",
+    topic: "location",
+    desc: "Filter services by proximity to a specific point. SPARQL can do basic math but DREAM-KG lacks the geospatial extensions needed for radius queries.",
+    predicates: ["latitude", "longitude"],
+    query: `# Radius/proximity queries require GeoSPARQL extensions
+# which are not currently enabled on the DREAM-KG endpoint.
+# lat/lon data exists but spatial functions like geof:distance
+# are not available.`,
+    gap: "❌ GeoSPARQL functions (like distance calculation) are not supported on this endpoint. Even though coordinates exist, you cannot ask 'find services within 1 mile of X'. This would require either enabling GeoSPARQL or building a post-processing layer."
+  },
+  {
+    id: 8,
+    question: "Which services offer support in Spanish?",
+    status: "partial",
+    topic: "language",
+    desc: "Find services that serve Spanish speakers. Language data exists but only for 13 of 662 services (~2%).",
+    predicates: ["category", "inCodeSet", "codeValue"],
+    query: `PREFIX dreamkg: <http://www.semanticweb.org/dreamkg/ijcai/>
+PREFIX sdo: <http://schema.org/>
+SELECT ?service ?name {
+  ?service sdo:name ?name ;
+           sdo:category ?lang .
+  ?lang sdo:inCodeSet dreamkg:_CategoryCodeSet_Languages ;
+        sdo:codeValue ?langLabel .
+  FILTER(CONTAINS(LCASE(STR(?langLabel)), "spanish"))
+}`,
+    gap: "⚠️ Language data only exists for 13 out of 662 services. Results are severely incomplete. The remaining 649 services have no language information recorded."
+  },
+  {
+    id: 9,
+    question: "What languages do services support, and how many offer each?",
+    status: "partial",
+    topic: "language",
+    desc: "Count services by language. Works but only reflects the 13 services that have language data.",
+    predicates: ["category", "inCodeSet", "codeValue"],
+    query: `PREFIX dreamkg: <http://www.semanticweb.org/dreamkg/ijcai/>
+PREFIX sdo: <http://schema.org/>
+SELECT ?language (COUNT(?service) AS ?count) {
+  ?service sdo:category ?lang .
+  ?lang sdo:inCodeSet dreamkg:_CategoryCodeSet_Languages ;
+        sdo:codeValue ?language .
+}
+GROUP BY ?language
+ORDER BY DESC(?count)`,
+    gap: "⚠️ Only 13 of 662 services have language data. Results are not representative of the full dataset."
+  },
+  {
+    id: 10,
+    question: "Which services have no language information recorded?",
+    status: "possible",
+    topic: "language",
+    desc: "Find all services missing language data — this highlights the scale of the language coverage gap.",
+    predicates: ["category", "inCodeSet", "name"],
+    query: `PREFIX dreamkg: <http://www.semanticweb.org/dreamkg/ijcai/>
+PREFIX sdo: <http://schema.org/>
+SELECT ?service ?name {
+  ?service a sdo:Service ;
+           sdo:name ?name .
+  FILTER NOT EXISTS {
+    ?service sdo:category ?lang .
+    ?lang sdo:inCodeSet dreamkg:_CategoryCodeSet_Languages .
+  }
+}`,
+    gap: null
+  },
+  {
+    id: 11,
+    question: "What is the phone number and website for a service?",
+    status: "possible",
+    topic: "contact",
+    desc: "Retrieve contact information for services. Phone numbers and URLs are well populated in the dataset.",
+    predicates: ["telephone", "servicePhone", "serviceUrl", "url", "name"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT ?name ?phone ?website {
+  ?service sdo:name ?name .
+  OPTIONAL { ?service sdo:telephone ?phone }
+  OPTIONAL { ?service sdo:serviceUrl ?website }
+}
+LIMIT 50`,
+    gap: null
+  },
+  {
+    id: 12,
+    question: "Which services have a website listed?",
+    status: "possible",
+    topic: "contact",
+    desc: "Find services that have a URL recorded so users can look them up online.",
+    predicates: ["serviceUrl", "url", "name"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT ?name ?url {
+  ?service sdo:name ?name ;
+           sdo:serviceUrl ?url .
+}
+ORDER BY ?name`,
+    gap: null
+  },
+  {
+    id: 13,
+    question: "Which services are specifically for veterans?",
+    status: "impossible",
+    topic: "population",
+    desc: "Filter services by the population they serve. Audience data only exists for 81 of 662 services.",
+    predicates: ["audienceType"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT ?service ?name {
+  ?service sdo:name ?name ;
+           sdo:audienceType ?audience .
+  FILTER(CONTAINS(LCASE(STR(?audience)), "veteran"))
+}`,
+    gap: "❌ Audience data (audienceType) only exists for 81 of 662 services (12%). A search for veterans, families, or youth will miss the vast majority of relevant services because the field is not populated."
+  },
+  {
+    id: 14,
+    question: "Which services are for families with children?",
+    status: "impossible",
+    topic: "population",
+    desc: "Find family-specific services. Same audience data gap — only 81 services have this field filled in.",
+    predicates: ["audienceType"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT ?service ?name {
+  ?service sdo:name ?name ;
+           sdo:audienceType ?audience .
+  FILTER(CONTAINS(LCASE(STR(?audience)), "famil"))
+}`,
+    gap: "❌ audienceType is missing for 88% of services. Results will be severely incomplete and unreliable for any population-based filtering."
+  },
+  {
+    id: 15,
+    question: "What are the access conditions for a service? (eligibility)",
+    status: "partial",
+    topic: "population",
+    desc: "Check conditionsOfAccess — what requirements must someone meet to use the service.",
+    predicates: ["conditionsOfAccess", "name"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT ?name ?conditions {
+  ?service sdo:name ?name ;
+           sdo:conditionsOfAccess ?conditions .
+}`,
+    gap: "⚠️ conditionsOfAccess exists but is sparsely populated. Coverage across all 662 services is incomplete."
+  },
+  {
+    id: 16,
+    question: "What are the highest-rated services?",
+    status: "possible",
+    topic: "reviews",
+    desc: "Rank services by average review rating. 3,762 reviews exist — about 5-6 per service — making this a rich query.",
+    predicates: ["reviewRating", "ratingValue", "name"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT ?name (AVG(xsd:decimal(?rating)) AS ?avgRating) (COUNT(?review) AS ?numReviews) {
+  ?service sdo:name ?name .
+  ?review sdo:itemReviewed ?service ;
+          sdo:reviewRating ?ratingObj .
+  ?ratingObj sdo:ratingValue ?rating .
+}
+GROUP BY ?name
+ORDER BY DESC(?avgRating)
+LIMIT 20`,
+    gap: null
+  },
+  {
+    id: 17,
+    question: "What do people say about a specific service in reviews?",
+    status: "possible",
+    topic: "reviews",
+    desc: "Read the actual text of reviews for any service. reviewBody contains user comments.",
+    predicates: ["reviewBody", "name"],
+    query: `PREFIX sdo: <http://schema.org/>
+SELECT ?name ?reviewText {
+  ?service sdo:name ?name ;
+           sdo:description ?reviewText .
+}
+LIMIT 30`,
+    gap: null
+  },
+  {
+    id: 18,
+    question: "Which services are free vs paid?",
+    status: "impossible",
+    topic: "reviews",
+    desc: "Filter services by cost. No cost or pricing predicate exists anywhere in the KG schema.",
+    predicates: [],
+    query: `# No cost/price predicate exists in DREAM-KG.
+# schema.org has sdo:offers and sdo:price but
+# these are not used in the current dataset.`,
+    gap: "❌ Cost/pricing data does not exist in DREAM-KG at all. There is no predicate for price, cost, or fee. For homeless individuals, knowing whether a service is free is critical information that is currently unavailable."
+  }
+];
+
+let activeFilter = 'all';
+let activeTopic = 'all';
+let activeSearch = '';
+let openCards = new Set();
+
+function buildSPARQLHtml(query) {
+  return query
+    .replace(/\b(PREFIX|SELECT|WHERE|FILTER|OPTIONAL|GROUP BY|ORDER BY|LIMIT|DESC|DISTINCT|NOT EXISTS|CONTAINS|LCASE|STR|COUNT|AVG|AS)\b/g, '<span class="kw">$1</span>')
+    .replace(/(PREFIX\s+\w+:?\s*&lt;[^&]*&gt;|&lt;[^&]*&gt;)/g, '<span class="prefix">$&</span>')
+    .replace(/(\?[\w]+)/g, '<span class="var">$1</span>')
+    .replace(/"([^"]*)"/g, '<span class="str">"$1"</span>');
+}
+
+function renderCards() {
+  const container = document.getElementById('cards-container');
+  const emptyState = document.getElementById('empty-state');
+
+  const filtered = useCases.filter(uc => {
+    const matchStatus = activeFilter === 'all' || uc.status === activeFilter;
+    const matchTopic = activeTopic === 'all' || uc.topic === activeTopic;
+    const matchSearch = !activeSearch || uc.question.toLowerCase().includes(activeSearch) || uc.desc.toLowerCase().includes(activeSearch);
+    return matchStatus && matchTopic && matchSearch;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+  emptyState.style.display = 'none';
+
+  container.innerHTML = filtered.map(uc => {
+    const statusLabel = { possible: '✓ POSSIBLE', impossible: '✗ NOT POSSIBLE', partial: '~ PARTIAL' }[uc.status];
+    const isOpen = openCards.has(uc.id);
+    const safeQuery = uc.query.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    return `
+    <div class="use-case-card ${uc.status === 'impossible' ? 'impossible' : ''}" id="card-${uc.id}" onclick="toggleCard(${uc.id})">
+      <div class="card-top">
+        <div class="card-question">${uc.question}</div>
+        <span class="status-pill ${uc.status}">${statusLabel}</span>
+      </div>
+      <div class="card-desc">${uc.desc}</div>
+      <div class="card-meta">
+        ${uc.predicates.map(p => `<span class="tag">${p}</span>`).join('')}
+      </div>
+      <div class="card-expanded ${isOpen ? 'open' : ''}" id="expanded-${uc.id}" onclick="event.stopPropagation()">
+        ${uc.gap ? `<div class="gap-note"><strong>Gap identified:</strong> ${uc.gap}</div>` : ''}
+        <div class="sparql-block">${buildSPARQLHtml(safeQuery)}</div>
+        ${uc.status !== 'impossible' ? `<a class="run-btn" href="${encodeQuery(uc.query)}" target="_blank">▶ Run on FRINK</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  updateCounts();
+}
+
+function toggleCard(id) {
+  if (openCards.has(id)) {
+    openCards.delete(id);
+  } else {
+    openCards.add(id);
+  }
+  renderCards();
+}
+
+function filterCards(status, btn) {
+  activeFilter = status;
+  document.querySelectorAll('.sidebar .filter-btn').forEach(b => {
+    if (b.dataset.topic === undefined) b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  renderCards();
+}
+
+function filterTopic(topic, btn) {
+  activeTopic = topic;
+  document.querySelectorAll('[data-topic]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCards();
+}
+
+function searchCards() {
+  activeSearch = document.getElementById('search').value.toLowerCase();
+  renderCards();
+}
+
+function updateCounts() {
+  const counts = { all: 0, possible: 0, partial: 0, impossible: 0 };
+  useCases.forEach(uc => { counts.all++; counts[uc.status]++; });
+  document.getElementById('count-all').textContent = counts.all;
+  document.getElementById('count-possible').textContent = counts.possible;
+  document.getElementById('count-partial').textContent = counts.partial;
+  document.getElementById('count-impossible').textContent = counts.impossible;
+  document.getElementById('possible-count').textContent = counts.possible + counts.partial;
+  document.getElementById('impossible-count').textContent = counts.impossible;
+}
+
+renderCards();
+</script>
+</body>
+</html>
