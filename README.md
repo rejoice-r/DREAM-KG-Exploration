@@ -1,5 +1,5 @@
 # DREAM-KG-Exploration
-Autonomous Knowledge Graph Auditing
+By using LLMs to querry and identify missing data.
 
 Overview:
 This repository demonstrates a methodology for using Large Language Models (LLMs) to autonomously query and identify missing data in a Knowledge Graph (Dream KG).
