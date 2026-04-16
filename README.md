@@ -4,7 +4,7 @@ By using LLMs to querry and identify missing data.
 Overview:
 This repository demonstrates a methodology for using Large Language Models (LLMs) to autonomously query and identify missing data in a Knowledge Graph (Dream KG).
 
-The Innovation: Traditional Knowledge Graph Completion often relies on static algorithms. This approach uses an Agentic Loop where the AI:
+This approach uses an Agentic Loop where the AI:
 
 Generates the Query: Translates a natural language goal into a specific KG query.
 
